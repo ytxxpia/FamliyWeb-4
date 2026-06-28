@@ -1,0 +1,122 @@
+name: 自动更新博客列表
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'blog/**'
+
+permissions:
+  contents: write
+
+jobs:
+  update-list:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+      
+      - name: 扫描文章并生成列表
+        run: |
+          python3 -c "
+import os
+import json
+import re
+from datetime import datetime
+
+# 🔥 如果 blog 文件夹不存在，自动创建
+posts_dir = './blog'
+if not os.path.exists(posts_dir):
+    os.makedirs(posts_dir)
+    print('📁 已创建 blog 文件夹')
+
+files = [f for f in os.listdir(posts_dir) if f.endswith('.md')]
+files.sort(reverse=True)
+
+blog_list = []
+
+if len(files) == 0:
+    blog_list.append({
+        'id': 1,
+        'title': '示例文章 - 请上传你的第一篇博客',
+        'file': 'example.md',
+        'date': '1900-01-01',
+        'author': '?',
+        'name': '示例文章',
+        'isExample': True
+    })
+    print('⚠️ blog 文件夹为空，已创建示例条目')
+else:
+    for index, filename in enumerate(files, 1):
+        file_path = os.path.join(posts_dir, filename)
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        author = '?'
+        name = '?'
+        date_str = '1900-01-01'
+        
+        if '-\n' in content:
+            header = content.split('-\n')[0].strip()
+            parts = re.split(r'[,，\s]+', header)
+            for part in parts:
+                if not part:
+                    continue
+                    
+                if ':' in part:
+                    key, value = part.split(':', 1)
+                elif '-' in part:
+                    key, value = part.split('-', 1)
+                else:
+                    continue
+                
+                key = key.strip().lower()
+                value = value.strip()
+                
+                if key in ['writer', 'author']:
+                    author = value
+                elif key == 'name':
+                    name = value
+                elif key == 'date':
+                    try:
+                        date_parts = re.split(r'[.-]', value)
+                        if len(date_parts) == 3:
+                            year, month, day = date_parts
+                            date_str = f\"{year}-{int(month):02d}-{int(day):02d}\"
+                        else:
+                            date_str = value
+                    except:
+                        date_str = '1900-01-01'
+                elif key == 'title':
+                    name = value
+        
+        if name == '?':
+            name = filename.replace('.md', '')
+        
+        blog_list.append({
+            'id': index,
+            'title': name,
+            'file': filename,
+            'date': date_str,
+            'author': author,
+            'name': name,
+            'isExample': False
+        })
+        
+        print(f'📄 已解析: {filename} -> 作者: {author}, 标题: {name}, 日期: {date_str}')
+
+with open('./list.json', 'w', encoding='utf-8') as f:
+    json.dump(blog_list, f, ensure_ascii=False, indent=2)
+
+print(f'✅ 已生成 {len(blog_list)} 条记录的 list.json')
+"
+      
+      - name: 提交更改
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions Bot"
+          git add list.json
+          git diff --staged --quiet || git commit -m "🤖 自动更新博客列表 [skip ci]"
+          git push
