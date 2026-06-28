@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>下载</title>  <!-- 已修改为“下载” -->
+    <!-- Font Awesome 6 (免费) CDN 备用，同时优先使用本地 ../Fonts/R-Fa.ttf -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 全局重置：白底、无阴影、圆角家族 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            box-shadow: none;
+            border: none;
+        }
+
+        /* 主容器：圆角，纯白，无阴影 */
+        .download-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 480px;
+            background-color: #ffffff;
+            border-radius: 36px;
+            padding: 28px 24px 36px;
+            box-shadow: none;
+            border: none;
+        }
+
+        /* ---------- 图片区域 ---------- */
+        .logo-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-wrapper img {
+            display: block;
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            object-fit: contain;
+            border-radius: 28px;
+            background-color: #ffffff;
+            box-shadow: none;
+            border: none;
+        }
+
+        /* ---------- 评分 + 推荐 行 ---------- */
+        .rating-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px 16px;
+            margin-bottom: 28px;
+            width: 100%;
+        }
+
+        /* 星星容器 */
+        .stars {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 1.8rem;
+            line-height: 1;
+            color: #f5b342;
+            letter-spacing: 0px;
+        }
+
+        /* 空星变灰 */
+        .stars .fa-regular.fa-star {
+            color: #d0d0d0;
+        }
+
+        /* 实星金色 */
+        .stars .fa-solid.fa-star {
+            color: #f5b342;
+        }
+
+        /* 推荐标签 */
+        .recommend-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffffff;
+            color: #000000;
+            font-size: 1.0rem;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 40px;
+            border: 1px solid #d0d0d0;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            box-shadow: none;
+            background: #ffffff;
+            line-height: 1.4;
+        }
+
+        .recommend-tag i {
+            margin-right: 4px;
+            font-size: 0.9rem;
+            color: #000000;
+        }
+
+        /* 适配小屏 */
+        @media (max-width: 420px) {
+            .stars {
+                font-size: 1.5rem;
+                gap: 1px;
+            }
+            .recommend-tag {
+                font-size: 0.85rem;
+                padding: 3px 10px;
+            }
+            .rating-row {
+                gap: 8px 12px;
+            }
+            .download-btn {
+                max-width: 240px;
+                padding: 16px 20px;
+                font-size: 1.2rem;
+                border-radius: 50px;
+            }
+            .download-container {
+                padding: 20px 16px 28px;
+                border-radius: 28px;
+            }
+            .logo-wrapper img {
+                max-width: 260px;
+                border-radius: 24px;
+            }
+        }
+
+        /* ---------- 下载按钮 ---------- */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 280px;
+            padding: 18px 28px;
+            background-color: #000000;
+            color: #ffffff;
+            font-size: 1.4rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: none;
+            box-shadow: none;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: inherit;
+            line-height: 1.2;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .download-btn:link,
+        .download-btn:visited,
+        .download-btn:hover,
+        .download-btn:active,
+        .download-btn:focus {
+            background-color: #000000;
+            color: #ffffff;
+            box-shadow: none;
+            outline: none;
+            border: none;
+            transform: none;
+            text-decoration: none;
+        }
+
+        .download-btn:active {
+            opacity: 0.85;
+        }
+
+        /* 移除所有可能出现的 outline / 边框 */
+        :focus-visible {
+            outline: none;
+        }
+        a, button, input, textarea {
+            box-shadow: none;
+            border: none;
+        }
+
+        .logo-wrapper img::before {
+            content: '';
+            display: block;
+            background: #ffffff;
+        }
+
+        /* 本地字体备用 */
+        @font-face {
+            font-family: 'Font Awesome 6 Free';
+            src: url('../Fonts/R-Fa.ttf') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+        }
+        .fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab {
+            font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Pro', 'Font Awesome 5 Free', 'FontAwesome', sans-serif;
+        }
+        .fa-solid, .fas {
+            font-weight: 900;
+        }
+        .fa-regular, .far {
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+    <div class="download-container">
+
+        <!-- 图片：同级目录 others/logo.png -->
+        <div class="logo-wrapper">
+            <img src="others/logo.png" alt="应用图标" />
+        </div>
+
+        <!-- 评分行：4星满 + 1空星，旁边显示“推荐” -->
+        <div class="rating-row">
+            <div class="stars" aria-label="评分：4.0 星">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="far fa-star"></i>
+            </div>
+
+            <span class="recommend-tag">
+                <i class="fas fa-check-circle" style="margin-right: 4px; color: #000000;"></i> 推荐
+            </span>
+        </div>
+
+        <!-- 下载按钮 -->
+        <a href="others/app.apk" class="download-btn" download="app.apk">
+            下载应用
+        </a>
+    </div>
+</body>
+</html>
