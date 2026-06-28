@@ -1,8 +1,8 @@
-name: Issue 自动处理
+name: Issue自动处理
 
 on:
   issues:
-    types: 
+    types:
       - opened
       - edited
       - labeled
@@ -14,195 +14,199 @@ permissions:
 jobs:
   process-issue:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
-      
-      - name: 获取 Issue 信息并处理
-        id: process
+
+      - name: 处理Issue
         run: |
-          python3 -c '
-import os, json, re, sys
-from datetime import datetime
+          python3 << 'PYTHON_SCRIPT'
+          import os
+          import json
+          import re
+          from datetime import datetime
 
-issue_number = "${{ github.event.issue.number }}"
-issue_title = "${{ github.event.issue.title }}"
-issue_body = "${{ github.event.issue.body }}"
-issue_author = "${{ github.event.issue.user.login }}"
-labels_str = "${{ join(github.event.issue.labels.*.name, ',') }}"
-labels = [l.strip() for l in labels_str.split(",") if l.strip()]
+          issue_number = "${{ github.event.issue.number }}"
+          issue_title = "${{ github.event.issue.title }}"
+          issue_body = "${{ github.event.issue.body }}"
+          issue_author = "${{ github.event.issue.user.login }}"
+          labels_str = "${{ join(github.event.issue.labels.*.name, ',') }}"
+          labels = [l.strip() for l in labels_str.split(',') if l.strip()]
 
-print(f"Processing Issue #{issue_number}: {issue_title}")
-print(f"Labels: {labels}")
+          os.makedirs('./interactive', exist_ok=True)
+          os.makedirs('./blog', exist_ok=True)
 
-os.makedirs("./interactive", exist_ok=True)
-os.makedirs("./blog", exist_ok=True)
+          processed = False
 
-processed = False
+          if 'blog' in labels:
+              processed = True
+              author = issue_author
+              date_str = datetime.now().strftime('%Y-%m-%d')
+              content = issue_body or ''
 
-if "blog" in labels:
-    processed = True
-    print("Processing blog label...")
-    author = issue_author
-    name = issue_title
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    content = issue_body or "(empty)"
-    lines = content.strip().split("\n")
-    meta_line = None
-    content_lines = []
-    skip_meta = False
-    for line in lines:
-        if not meta_line and ("writer-" in line or "author-" in line or "date-" in line):
-            meta_line = line
-            skip_meta = True
-            continue
-        if skip_meta:
-            skip_meta = False
-            continue
-        content_lines.append(line)
-    if meta_line:
-        parts = re.split(r"[,，\s]+", meta_line)
-        for part in parts:
-            if not part:
-                continue
-            if ":" in part:
-                key, value = part.split(":", 1)
-            elif "-" in part:
-                key, value = part.split("-", 1)
-            else:
-                continue
-            key = key.strip().lower()
-            value = value.strip()
-            if key in ["writer", "author"]:
-                author = value
-            elif key == "date":
-                try:
-                    date_parts = re.split(r"[.-]", value)
-                    if len(date_parts) == 3:
-                        date_str = f"{date_parts[0]}-{int(date_parts[1]):02d}-{int(date_parts[2]):02d}"
-                    else:
-                        date_str = value
-                except:
-                    date_str = datetime.now().strftime("%Y-%m-%d")
-    filename = re.sub(r"[^\w\s-]", "", issue_title)
-    filename = re.sub(r"[-\s]+", "-", filename).strip("-")
-    filename = filename.lower()
-    if not filename:
-        filename = f"issue-{issue_number}"
-    md_content = f"""writer-{author},name-{issue_title},date-{date_str}
--
-# {issue_title}
+              lines = content.strip().split('\n')
+              meta_line = None
+              content_lines = []
+              skip_meta = False
 
-> This post is contributed by @{issue_author} via Issue #{issue_number}
+              for line in lines:
+                  if not meta_line and ('writer-' in line or 'author-' in line or 'date-' in line):
+                      meta_line = line
+                      skip_meta = True
+                      continue
+                  if skip_meta:
+                      skip_meta = False
+                      continue
+                  content_lines.append(line)
 
-{"\\n".join(content_lines) if content_lines else issue_body}
+              if meta_line:
+                  parts = re.split(r'[,，\s]+', meta_line)
+                  for part in parts:
+                      if not part:
+                          continue
+                      if ':' in part:
+                          key, value = part.split(':', 1)
+                      elif '-' in part:
+                          key, value = part.split('-', 1)
+                      else:
+                          continue
+                      key = key.strip().lower()
+                      value = value.strip()
+                      if key in ['writer', 'author']:
+                          author = value
+                      elif key == 'date':
+                          try:
+                              date_parts = re.split(r'[.-]', value)
+                              if len(date_parts) == 3:
+                                  date_str = f"{date_parts[0]}-{int(date_parts[1]):02d}-{int(date_parts[2]):02d}"
+                          except:
+                              pass
 
----
-This article is automatically generated at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-"""
-    blog_path = f"./blog/{filename}.md"
-    with open(blog_path, "w", encoding="utf-8") as f:
-        f.write(md_content)
-    print(f"  Generated: blog/{filename}.md")
-    blog_log = {"issue_number": issue_number, "title": issue_title, "author": author, "date": date_str, "filename": f"{filename}.md", "original_author": issue_author, "processed_at": datetime.now().isoformat(), "content_preview": issue_body[:200] + "..." if len(issue_body) > 200 else issue_body}
-    blog_log_path = "./interactive/New blog.json"
-    existing_logs = []
-    if os.path.exists(blog_log_path):
-        with open(blog_log_path, "r", encoding="utf-8") as f:
-            existing_logs = json.load(f)
-        if not isinstance(existing_logs, list):
-            existing_logs = [existing_logs]
-    existing_logs.append(blog_log)
-    with open(blog_log_path, "w", encoding="utf-8") as f:
-        json.dump(existing_logs, f, ensure_ascii=False, indent=2)
-    print(f"  Logged: interactive/New blog.json")
+              filename = re.sub(r'[^\w\s-]', '', issue_title)
+              filename = re.sub(r'[-\s]+', '-', filename).strip('-').lower()
+              if not filename:
+                  filename = f"issue-{issue_number}"
 
-if "Notice" in labels:
-    processed = True
-    print("Processing Notice label...")
-    repo_name = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
-    notice_data = {"issue_number": issue_number, "title": issue_title, "author": issue_author, "content": issue_body or "(empty)", "created_at": datetime.now().isoformat(), "url": f"https://github.com/{repo_name}/issues/{issue_number}"}
-    notice_path = "./interactive/New notice.json"
-    existing_notices = []
-    if os.path.exists(notice_path):
-        with open(notice_path, "r", encoding="utf-8") as f:
-            existing_notices = json.load(f)
-        if not isinstance(existing_notices, list):
-            existing_notices = [existing_notices]
-    existing_notices.append(notice_data)
-    with open(notice_path, "w", encoding="utf-8") as f:
-        json.dump(existing_notices, f, ensure_ascii=False, indent=2)
-    print(f"  Written: interactive/New notice.json")
+              body_text = '\n'.join(content_lines) if content_lines else issue_body
 
-if "bug" in labels:
-    processed = True
-    print("Processing bug label...")
-    repo_name = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
-    bug_data = {"issue_number": issue_number, "title": issue_title, "author": issue_author, "description": issue_body or "(empty)", "created_at": datetime.now().isoformat(), "url": f"https://github.com/{repo_name}/issues/{issue_number}", "status": "pending"}
-    bug_path = "./interactive/New bug.json"
-    existing_bugs = []
-    if os.path.exists(bug_path):
-        with open(bug_path, "r", encoding="utf-8") as f:
-            existing_bugs = json.load(f)
-        if not isinstance(existing_bugs, list):
-            existing_bugs = [existing_bugs]
-    existing_bugs.append(bug_data)
-    with open(bug_path, "w", encoding="utf-8") as f:
-        json.dump(existing_bugs, f, ensure_ascii=False, indent=2)
-    print(f"  Written: interactive/New bug.json")
+              md_content = f"""writer-{author},name-{issue_title},date-{date_str}
+        -
+        # {issue_title}
 
-if not processed:
-    print("No matching labels found")
-    sys.exit(1)
+        > 本文由 @{issue_author} 通过 Issue #{issue_number} 投稿
 
-print("Processing completed successfully")
-'
-      
+        {body_text}
+
+        ---
+        本文自动生成于 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        """
+
+              with open(f"./blog/{filename}.md", 'w', encoding='utf-8') as f:
+                  f.write(md_content)
+
+              log_entry = {
+                  "issue_number": issue_number,
+                  "title": issue_title,
+                  "author": author,
+                  "date": date_str,
+                  "filename": f"{filename}.md",
+                  "original_author": issue_author,
+                  "processed_at": datetime.now().isoformat()
+              }
+
+              log_path = "./interactive/New blog.json"
+              logs = []
+              if os.path.exists(log_path):
+                  with open(log_path, 'r', encoding='utf-8') as f:
+                      logs = json.load(f)
+                      if not isinstance(logs, list):
+                          logs = [logs]
+              logs.append(log_entry)
+              with open(log_path, 'w', encoding='utf-8') as f:
+                  json.dump(logs, f, ensure_ascii=False, indent=2)
+
+          if 'Notice' in labels:
+              processed = True
+              repo = os.environ.get('GITHUB_REPOSITORY', '')
+              entry = {
+                  "issue_number": issue_number,
+                  "title": issue_title,
+                  "author": issue_author,
+                  "content": issue_body or '',
+                  "created_at": datetime.now().isoformat(),
+                  "url": f"https://github.com/{repo}/issues/{issue_number}" if repo else ''
+              }
+              log_path = "./interactive/New notice.json"
+              logs = []
+              if os.path.exists(log_path):
+                  with open(log_path, 'r', encoding='utf-8') as f:
+                      logs = json.load(f)
+                      if not isinstance(logs, list):
+                          logs = [logs]
+              logs.append(entry)
+              with open(log_path, 'w', encoding='utf-8') as f:
+                  json.dump(logs, f, ensure_ascii=False, indent=2)
+
+          if 'bug' in labels:
+              processed = True
+              repo = os.environ.get('GITHUB_REPOSITORY', '')
+              entry = {
+                  "issue_number": issue_number,
+                  "title": issue_title,
+                  "author": issue_author,
+                  "description": issue_body or '',
+                  "created_at": datetime.now().isoformat(),
+                  "url": f"https://github.com/{repo}/issues/{issue_number}" if repo else '',
+                  "status": "pending"
+              }
+              log_path = "./interactive/New bug.json"
+              logs = []
+              if os.path.exists(log_path):
+                  with open(log_path, 'r', encoding='utf-8') as f:
+                      logs = json.load(f)
+                      if not isinstance(logs, list):
+                          logs = [logs]
+              logs.append(entry)
+              with open(log_path, 'w', encoding='utf-8') as f:
+                  json.dump(logs, f, ensure_ascii=False, indent=2)
+
+          if not processed:
+              print("没有匹配的标签")
+              exit(1)
+
+          print("处理完成")
+          PYTHON_SCRIPT
+
       - name: 提交更改
         if: success()
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions Bot"
           git add blog/ interactive/
-          git diff --staged --quiet || git commit -m "Processed from Issue #${{ github.event.issue.number }} [skip ci]"
+          git diff --staged --quiet || git commit -m "处理 Issue #${{ github.event.issue.number }} [skip ci]"
           git push
-      
-      - name: 添加成功评论
+
+      - name: 添加评论
         if: success()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueNumber = context.issue.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
             const labels = "${{ join(github.event.issue.labels.*.name, ',') }}";
-            
-            let message = "Your issue has been processed successfully.\n\n";
-            
-            if (labels.includes('blog')) {
-              message += "Blog post: generated in `blog/` folder, logged in `interactive/New blog.json`\n";
-            }
-            if (labels.includes('Notice')) {
-              message += "Notice: recorded in `interactive/New notice.json`\n";
-            }
-            if (labels.includes('bug')) {
-              message += "Bug report: recorded in `interactive/New bug.json`\n";
-            }
-            
-            message += "\nThank you for your contribution.";
-            
+            let msg = "处理完成！\n\n";
+            if (labels.includes('blog')) msg += "- 博客文章已生成到 `blog/` 文件夹\n";
+            if (labels.includes('Notice')) msg += "- 通知已记录到 `interactive/New notice.json`\n";
+            if (labels.includes('bug')) msg += "- Bug报告已记录到 `interactive/New bug.json`\n";
             await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              body: message
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: msg
             });
-            
             await github.rest.issues.addLabels({
-              owner,
-              repo,
-              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
               labels: ['processed']
             });
