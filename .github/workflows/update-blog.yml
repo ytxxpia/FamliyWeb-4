@@ -21,7 +21,7 @@ jobs:
       - name: 创建 blog 文件夹（如果不存在）
         run: |
           mkdir -p blog
-          echo "📁 blog 文件夹已准备就绪"
+          echo "blog 文件夹已准备就绪"
       
       - name: 扫描并生成 JSON
         run: |
@@ -47,7 +47,7 @@ jobs:
                   'name': '示例文章',
                   'isExample': True
               })
-              print('⚠️ blog 文件夹为空，已创建示例条目')
+              print('blog 文件夹为空，已创建示例条目')
           else:
               for index, filename in enumerate(files, 1):
                   file_path = os.path.join(posts_dir, filename)
@@ -103,22 +103,23 @@ jobs:
                       'isExample': False
                   })
                   
-                  print(f'📄 已解析: {filename}')
+                  print(f'已解析: {filename}')
 
-          with open('./list.json', 'w', encoding='utf-8') as f:
+          # 修改：生成到 blog/list.json
+          with open('./blog/list.json', 'w', encoding='utf-8') as f:
               json.dump(blog_list, f, ensure_ascii=False, indent=2)
 
-          print(f'✅ 已生成 list.json，共 {len(blog_list)} 条记录')
+          print(f'已生成 blog/list.json，共 {len(blog_list)} 条记录')
           EOF
       
       - name: 提交更改
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions Bot"
-          git add list.json
+          git add blog/list.json
           if git diff --staged --quiet; then
             echo "没有变化需要提交"
           else
-            git commit -m "🤖 自动更新博客列表 [skip ci]"
+            git commit -m "自动更新博客列表 [skip ci]"
             git push
           fi
